@@ -1,5 +1,6 @@
 from flask import Flask
 
+
 app = Flask(__name__)
 
 
@@ -9,7 +10,7 @@ def hello_world():
 
 @app.route('/min-energy')
 def min_energy():
-    return 'Hello World!'
+    return
 
 @app.route('/min-cost')
 def min_cost():

@@ -24,7 +24,7 @@ def get_data(normalized=0):
     return df
 print("in lstm")
 data = get_data()
-labels = data.columns
+# labels = data.columns
 
 data.drop(['Date'],inplace=True, axis='columns')
 
