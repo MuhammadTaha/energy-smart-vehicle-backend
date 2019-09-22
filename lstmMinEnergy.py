@@ -11,9 +11,9 @@ num_classes = 10
 
 def get_data(normalized=0):
     col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","marketprice [Euro/MWh]","CityRouteTime(sec) - distance 10.8km","HighwayRouteTime(sec) - distance 16.5 km"]
-    stocks = pd.read_csv(r"Master_Dataset_Final.csv", encoding = "ISO-8859-1" , header=0)
-    stocks.drop(columns=col_names)
-    df = pd.DataFrame(stocks)
+    data = pd.read_csv(r"Master_Dataset_Final.csv", encoding = "ISO-8859-1" , header=0)
+    data.drop(columns=col_names)
+    df = pd.DataFrame(data)
     df.drop(col_names,inplace=True, axis='columns')
     #
     return df

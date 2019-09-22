@@ -1,25 +1,20 @@
-from flask import Flask
-
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
+# @app.route('/')
+# def hello_world():
+#     return 'Hello World!'
 
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
+@app.route('/route-based', methods=['GET', 'POST'])
+def route_based():
+    return request.data
 
-@app.route('/min-energy')
-def min_energy():
-    return
-
-@app.route('/min-cost')
-def min_cost():
-    return 'minimum cost time!'
-
-@app.route('/min-drive-time')
-def min_drive_time():
-    return 'minimum driving time'
-
+@app.route('/charging-based', methods=['GET', 'POST'])
+def charging_based():
+    return request.data
 
 if __name__ == '__main__':
     app.run()
