@@ -17,7 +17,9 @@ def route_based():
 @app.route('/charging-based', methods=['GET', 'POST'])
 def charging_based():
     print(getChargingOptimizationResults())
-    assignValuesCombined(json.loads(request.data))
+    jsonData = json.loads(request.data)
+    print(jsonData['departureTime'])
+    assignValuesCombined(jsonData)
     return request.data
     # return getChargingOptimizationResults()
 
