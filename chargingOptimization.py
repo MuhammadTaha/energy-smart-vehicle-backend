@@ -70,6 +70,11 @@ mDynamic.update()
 ### Objective Function
 mDynamic.setObjective(quicksum(chargingPrices[t]*chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
 
+def assignChargingRequest(data):
+    print(data)
+
+
+
 def printSolution():
     if mDynamic.status == GRB.Status.OPTIMAL:
         print('\n----------------------------------------------------------------\n')

@@ -82,12 +82,18 @@ Prices for Driving Time and Waiting Time
 pricePerHour = 20
 pricePerMinute = pricePerHour/60
 
+
+def assignValuesCombined(data):
+    print(data)
+
+
+
 ### Solution
 def printSolution():
     print('\n------------------------------------------------------------')
     print('\nRecommendation for %s (%s.%s.%s):' % (recommendedRoute.Weekday,recommendedRoute.Day,recommendedRoute.Month,recommendedRoute.Year))
     print('\nDesired arrival time: %s : %s' % (desiredArrivalTimeHour,desiredArrivalTimeMinute))
-    print("\nWeight driving time: %s% | Weight waiting time: %s% | Weight energy consumption: %s%" % (drivingWeight,waitingWeight,energyWeight))
+    print("\nWeight driving time: %s  Weight waiting time: %s  Weight energy consumption: %s" % (drivingWeight,waitingWeight,energyWeight))
     print('\n------------------------------------------------------------')
     print('\nRecommended Route: %s' % (recommendedRoute.Route))
     print('\nDeparture Time: %s : %s' % (recommendedRoute.departureTimeHour, recommendedRoute.departureTimeMinute))
