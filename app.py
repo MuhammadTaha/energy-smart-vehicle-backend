@@ -1,20 +1,20 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from chargingOptimization import getChargingOptimizationResults
+from combinedOptimization import getCombinedOptimizationResults
 
 app = Flask(__name__)
 CORS(app)
 
-# @app.route('/')
-# def hello_world():
-#     return 'Hello World!'
-
 @app.route('/route-based', methods=['GET', 'POST'])
 def route_based():
-    return request.data
+    # print(getCombinedOptimizationResults())
+    return getCombinedOptimizationResults()
 
 @app.route('/charging-based', methods=['GET', 'POST'])
 def charging_based():
-    return request.data
+    # print(getChargingOptimizationResults())
+    return getChargingOptimizationResults()
 
 if __name__ == '__main__':
     app.run()

@@ -1,6 +1,8 @@
 from gurobipy import *
 import numpy as np
 import matplotlib.pyplot as plt
+import json
+import collections
 
 # Car specs: BMW I3
 battCap = 37.9
@@ -82,7 +84,13 @@ def printSolution():
         print('\nCharging costs using retail prices: %s ct' % (retailChargingCosts))
     else:
         print('No solution')
-        
+
+
+
+
+
+
+
 mDynamic.optimize()
 printSolution()
 
@@ -95,4 +103,21 @@ plt.ylabel('TRANSFERRED ENERGY (kW)')
 plt.xlabel('ENERGY PRICE (ct/kW)')
 plt.title('CHARGING ACTIVITY')
 
-plt.show()
+# plt.show()
+
+
+
+def getChargingOptimizationResults():
+    results = collections.defaultdict();
+    resultsChargingPrice = collections.defaultdict();
+    chargex = mDynamic.getAttr('x', chargingRate)
+    results["sumTransferedEnergy"] = sumTransferedEnergy
+    results["minimumChargingCost"] = mDynamic.objVal
+    results["UsedChargingTime"] = realChargingDuration
+    results["RetailChargingCost"] = retailChargingCosts
+    results["ChargingPrices"] = {}
+    for t in np.arange(8):
+        resultsChargingPrice.setdefault(chargex[t], []).append(chargingPrices[t])
+
+    results["ChargingPrices"] = resultsChargingPrice
+    return json.dumps(results)

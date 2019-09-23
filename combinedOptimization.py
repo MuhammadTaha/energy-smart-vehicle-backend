@@ -8,6 +8,7 @@ from datetime import timedelta
 from operator import itemgetter 
 import math
 import time
+import collections, json
 
 """
 Values to get from forecasting:
@@ -201,3 +202,16 @@ m.setObjective(quicksum(temp[x] * choice[x] for x in range(len(temp))), GRB.MINI
 m.optimize()
 
 printSolution()
+
+
+def getCombinedOptimizationResults():
+    results = collections.defaultdict();
+    results["desiredArrivalTime"] = desiredArrivalTimeHour +":"+ desiredArrivalTimeMinute
+    results["recommendedRoute"] = recommendedRoute.Route
+    results["departureTIme"] = recommendedRoute.departureTimeHour +":"+ recommendedRoute.departureTimeMinute
+    results["arrivalTime"] = recommendedRoute.arrivalTimeHour +":"+recommendedRoute.arrivalTimeMinute
+    results["drivingTime:"] = recommendedRoute.travelTime
+    results["waitingTime:"] = recommendedRoute.waitingTime
+    results["energyPrice:"] = recommendedRoute.energyPrice
+
+    return json.dumps(results)
