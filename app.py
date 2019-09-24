@@ -28,7 +28,6 @@ def charging_based():
     arrivalTime,departureTime,charRate,SOC_per_beg = chargeOpt.assignChargingRequest(jsonData)
     chargeOpt.charOptimization('2019-09-23T12:00','2019-09-23T22:00',charRate,SOC_per_beg)
     return chargeOpt.getChargingOptimizationResults()
-    # return getChargingOptimizationResults()
 
 if __name__ == '__main__':
     app.run()
