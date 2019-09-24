@@ -12,11 +12,9 @@ num_classes = 10
 
 def get_data(normalized=0):
 #    col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","marketprice [Euro/MWh]","CityRouteTime(sec) - distance 10.8km","HighwayRouteTime(sec) - distance 16.5 km"]
-    col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","CityRoute","HighwayRoute",
-                 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
-                 'Saturday']
-    stocks = pd.read_csv(r"Master_Dataset_Final.csv", sep = ';', encoding = "ISO-8859-1" , header=0)
-    stocks.colnames = ['s_year', 's_month', 'e_day', 's_hour', 'Day', 'DayNum', 'Day_or_Night',
+    col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","energyprice","HighwayRoute"]
+    stocks = pd.read_csv(r"Master_Dataset_Final.csv", encoding = "ISO-8859-1" , header=0)
+    stocks.columns = ['s_year', 's_month', 'e_day', 's_hour', 'Day', 'DayNum', 'Day_or_Night',
        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
        'Saturday', 'Day.1', 'Night', 'Precipitation', 'No_Precipitation',
        'Temperature', 'EnergyConsumedWiper(Wh/km)', 'Precipitation_Qty',
@@ -30,11 +28,8 @@ def get_data(normalized=0):
 
 print("in lstm")
 data = get_data()
-#data = pd.read_csv('rain_10.csv')
-#data = data.iloc[:,1:]
-
-data.drop(columns=['DayNum','Night','No_Precipitation', 'Temperature',
-       'DayTime','EnergyConsumedWiper(Wh/km)'],inplace=True)
+data.drop(columns=['DayNum','Precipitation','Night','No_Precipitation',
+       'Day.1','EnergyConsumedWiper(Wh/km)','Temperature'],inplace=True)
 
 train_size = int(len(data) * 0.8)
 train, test = data[0:train_size], data[train_size:len(data)]
@@ -53,7 +48,9 @@ data_dim =  x_train.shape[1] #number of input features
 model = Sequential()
 model.add(LSTM(64, return_sequences=True,
                input_shape=(1, data_dim)))  # returns a sequence of vectors of dimension 32
+model.add(Dropout(0.5))
 model.add(LSTM(64, return_sequences=True))  # returns a sequence of vectors of dimension 32
+model.add(Dropout(0.5))
 model.add(LSTM(64))  # return a single vector of dimension 32
 model.add(Dropout(0.5))
 model.add(Dense(1))
@@ -84,7 +81,7 @@ print('Test Score: %.2f MSE (%.2f RMSE)' % (testScore[0], math.sqrt(testScore[0]
 
 p = model.predict(testX)
 
-model.save('precipitationModel.h5')  # creates a HDF5 file 'my_model.h5'
+model.save('cityModel.h5')  # creates a HDF5 file 'my_model.h5'
 
 
 val = np.array(p)
