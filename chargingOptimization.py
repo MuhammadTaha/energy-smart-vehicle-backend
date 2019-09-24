@@ -15,8 +15,8 @@ class ChargingOptimizations:
     def assignChargingRequest(self,data):
         arrivalTime = data['arrivalTime']
         departureTime = data['departureTime']
-        charRate = data['powerSelection']
-        SOC_per_beg = data['chargingStatus']
+        charRate = float(data['powerSelection'])
+        SOC_per_beg = float(data['chargingStatus'])/100
     #    self.SOC_per_end = data['']
         return arrivalTime,departureTime,charRate,SOC_per_beg
 
@@ -155,8 +155,8 @@ class ChargingOptimizations:
 
 
     def getChargingOptimizationResults(self):
-        results = collections.defaultdict();
-        resultsChargingPrice = collections.defaultdict();
+        results = {}
+        resultsChargingPrice = collections.defaultdict()
         results["sumTransferedEnergy"] = self.sumTransferedEnergy
         results["minimumChargingCost"] = self.mDynamic.objVal
         results["UsedChargingTime"] = self.realChargingDuration
@@ -164,7 +164,8 @@ class ChargingOptimizations:
         chargex = self.mDynamic.getAttr('x', self.chargingRate)
         results["ChargingPrices"] = {}
         for t in np.arange(8):
-            resultsChargingPrice.setdefault(chargex[t], []).append(self.chargingPrices[t])
+            resultsChargingPrice.setdefault(chargex[t], []).append(self.chargingPrices[t][0])
 
         results["ChargingPrices"] = resultsChargingPrice
+        print(results)
         return json.dumps(results)
