@@ -6,19 +6,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 import collections
-<<<<<<<
 
-=======
-import pandas as pd
->>>>>>>
 
 def assignChargingRequest(data):
     arrivalTime = data['arrivalTime']
     departureTime = data['departureTime']
     charRate = data['powerSelection']
-    SoC_per_beg: object = data['chargingStatus']
+    SOC_per_beg = data['chargingStatus']
 #    self.SOC_per_end = data['']
-    return arrivalTime,departureTime,charRate,SoC_per_beg
+    return arrivalTime,departureTime,charRate,SOC_per_beg
 
 # def printSolution():
 #     if mDynamic.status == GRB.Status.OPTIMAL:
@@ -58,11 +54,9 @@ def charOptimization(arrivalTime,departureTime,charRate,SoC_per_beg):
     valueDF = pd.DataFrame(valueArray)
     request = np.array(valueDF)
     request = np.reshape(request, (request.shape[0], 1, request.shape[1]))
-    model = load_model('.\Forecasting Models\energyModel.h5')
-
     varPrices = model.predict(request)
     
-
+    
     
     # Car specs: BMW I3
     battCap = 22
@@ -82,7 +76,7 @@ def charOptimization(arrivalTime,departureTime,charRate,SoC_per_beg):
     ### Energy needed
     SoC_beg = battCap * SoC_per_beg
     SoC_end = battCap * SoC_per_end
-    sumTransferedEnergy = SoC_end - float(SoC_beg)
+    sumTransferedEnergy = SoC_end - SoC_beg
     
     '''
     Dynamic Price data taken from https://www.awattar.de/ (09.07.2019)
@@ -97,6 +91,7 @@ def charOptimization(arrivalTime,departureTime,charRate,SoC_per_beg):
     #          4.41, 4.18, 4.14, 4.07, 4.13, 4.37,
     #          4.8, 5.59, 5.7, 5.47, 5.22, 4.36]
     prices = [(v + fixedPrice).tolist() for v in varPrices]
+
     
     '''
     Retail price taken from https://www.vattenfall.de/stromtarife/strom-natur24 (Access: 14.07.2019)
@@ -111,27 +106,23 @@ def charOptimization(arrivalTime,departureTime,charRate,SoC_per_beg):
     ### Charging time & prices
     #chargingDuration = endTime - startTime
     chargingInterval = np.arange(chargingDuration)
-    realChargingDuration = sumTransferedEnergy/float(charRate)
+    realChargingDuration = sumTransferedEnergy/charRate
     #chargingPrices = prices[startTime:endTime]
     chargingPrices = np.round(prices,2)
+
     
     ### Variables
     chargingRate = list()
     for t in chargingInterval:
-        chargingRate.append(mDynamic.addVar(vtype = 'C', lb=0.0, ub=int(charRate)))
+        chargingRate.append(mDynamic.addVar(vtype = 'C', lb=0.0, ub=charRate))
         
     ### Constraints
     mDynamic.addConstr((quicksum(chargingRate) == sumTransferedEnergy))
     
     mDynamic.update()
-    # print(chargingRate)
-    # print(chargingPrices)
-    #
-    # print(chargingInterval)
-
+    
     ### Objective Function
-    # chargingPrices = list(chargingPrices)
-    mDynamic.setObjective(quicksum(chargingPrices[t]*chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
+    mDynamic.setObjective(quicksum(chargingPrices[t][0]*chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
     
     mDynamic.optimize()
 #     printSolution()
