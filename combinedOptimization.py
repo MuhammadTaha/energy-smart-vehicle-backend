@@ -31,6 +31,8 @@ class RouteOptimizations:
     recommendedRoute = pd.Series()
     minute = 0
     hour = 0
+    month = 0
+    day = 0
     
     ### Solution
     def printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute):
@@ -56,13 +58,13 @@ class RouteOptimizations:
         """
         arrivalDT = datetime.strptime(arrivalTime, '%Y-%m-%dT%H:%M')
         departureDT = arrivalDT - timedelta(hours=2)
-        month = arrivalDT.month
-        day = arrivalDT.day 
+        self.month = arrivalDT.month
+        self.day = arrivalDT.day 
         self.hour = arrivalDT.hour
         self.minute = arrivalDT.minute
         timeArray = []
         for i in range(departureDT.hour,arrivalDT.hour+1):
-            array = [month,day,i,0,0,0,0,0,0,0]
+            array = [self.month,self.day,i,0,0,0,0,0,0,0]
             if (arrivalDT.isoweekday()<7):
                 array[arrivalDT.isoweekday()+4] = 1
             elif (arrivalDT.isoweekday() == 7):
@@ -89,7 +91,7 @@ class RouteOptimizations:
                 wait = (arrivalDT - arr).total_seconds() / 60
                 if arr.hour < self.hour:
                     arrivalTimesCity.append(['City',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
-                elif (arr.hour == self.hour) & (arr.minute <= minute):
+                elif (arr.hour == self.hour) & (arr.minute <=self. minute):
                     arrivalTimesCity.append(['City',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 else:
                     continue
@@ -99,7 +101,7 @@ class RouteOptimizations:
                 wait = (arrivalDT - arr).total_seconds() / 60
                 if arr.hour < arrivalDT.hour:
                     arrivalTimesCity.append(['City',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
-                elif (arr.hour == self.hour) & (arr.minute <= minute):
+                elif (arr.hour == self.hour) & (arr.minute <= self.minute):
                     arrivalTimesCity.append(['City',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 else:
                     continue
@@ -114,7 +116,7 @@ class RouteOptimizations:
                 wait = (arrivalDT - arr).total_seconds() / 60
                 if arr.hour < self.hour:
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
-                elif (arr.hour == self.hour) & (arr.minute <= minute):
+                elif (arr.hour == self.hour) & (arr.minute <= self.minute):
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 else:
                     continue
@@ -124,7 +126,7 @@ class RouteOptimizations:
                 wait = (arrivalDT - arr).total_seconds() / 60
                 if arr.hour < self.hour:
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
-                elif (arr.hour == self.hour) & (arr.minute <= minute):
+                elif (arr.hour == self.hour) & (arr.minute <= self.minute):
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 else:
                     continue        
@@ -138,13 +140,13 @@ class RouteOptimizations:
         energyDF = timeDF.iloc[:,:3]
         energyRequest = np.array(energyDF)
         energyRequest = np.reshape(energyRequest, (energyRequest.shape[0], 1, energyRequest.shape[1]))
-        precipitation = precipitationModel.predict(energyRequest)
+        precipitation = self.precipitationModel.predict(energyRequest)
         precipitation = precipitation > 0.5
-        temperature = temperatureModel.predict(energyRequest)
+        temperature = self.temperatureModel.predict(energyRequest)
         print('fine')
-        whiperCons = getWhiperConsumption(precipitation,arrDF)
-        lightCons = getLightConsumption(arrDF,self.hour)
-        acCons = getAcConsumption(temperature,arrDF)
+        whiperCons = self.getWhiperConsumption(precipitation,arrDF)
+        lightCons = self.getLightConsumption(arrDF,self.hour)
+        acCons = self.getAcConsumption(temperature,arrDF)
         print('fine')
         energyCons = []
         energyCost = []
@@ -197,9 +199,8 @@ class RouteOptimizations:
         
         printSolution(self.hour,self.minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute)
         
-    def getWhiperConsumption(precipitation, arrDF):
+    def getWhiperConsumption(self,precipitation, arrDF):
         whiperConsumptionPerH = 0.06
-        lightConsumptionPerH = 0.054
         
         whiperConsumption = []
         for i in range(len(arrDF)):
@@ -221,7 +222,7 @@ class RouteOptimizations:
         
         return whiperConsumption
     
-    def getLightConsumption(arrDF, hour):
+    def getLightConsumption(self,arrDF, hour):
         lightConsumption = []
         lightConsumptionHighwayDay = 20.89
         lightConsumptionHighwayNight = 53.35
@@ -229,7 +230,7 @@ class RouteOptimizations:
         lightConsumptionCityNight = 34.92
         
         sunData = pd.read_csv('sun.csv',index_col=[0])
-        sunDataRel = sunData[(sunData.month == month) & (sunData.day == day)]
+        sunDataRel = sunData[(sunData.month == self.month) & (sunData.day == self.day)]
         
         srH = sunDataRel.srH.item()
         ssH = sunDataRel.ssH.item()
@@ -255,7 +256,7 @@ class RouteOptimizations:
                 
         return lightConsumption
                 
-    def getAcConsumption(temperature,arrDF):
+    def getAcConsumption(self,temperature,arrDF):
         acConsumption = []
         
         dH = np.array(arrDF.dep_H) 
