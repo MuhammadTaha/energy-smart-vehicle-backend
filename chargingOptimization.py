@@ -71,6 +71,7 @@ class ChargingOptimizations:
         request = np.array(valueDF)
         request = np.reshape(request, (request.shape[0], 1, request.shape[1]))
         varPrices = self.model.predict(request)
+        varPrices = varPrices/10
 
 
 
@@ -158,14 +159,14 @@ class ChargingOptimizations:
         results = {}
         resultsChargingPrice = collections.defaultdict()
         results["sumTransferedEnergy"] = self.sumTransferedEnergy
-        results["minimumChargingCost"] = self.mDynamic.objVal
-        results["UsedChargingTime"] = self.realChargingDuration
+        results["minimumChargingCost"] = round(self.mDynamic.ObjVal,2)
+        results["UsedChargingTime"] = round(self.realChargingDuration,2)
+
         results["RetailChargingCost"] = self.retailChargingCosts
         chargex = self.mDynamic.getAttr('x', self.chargingRate)
         results["ChargingPrices"] = {}
         for t in np.arange(8):
-            resultsChargingPrice.setdefault(chargex[t], []).append(self.chargingPrices[t][0])
+            resultsChargingPrice.setdefault(round(chargex[t],2), []).append(self.chargingPrices[t][0])
 
         results["ChargingPrices"] = resultsChargingPrice
-        print(results)
         return json.dumps(results)

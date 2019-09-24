@@ -18,8 +18,6 @@ def route_based():
     arrivalTime,drivingWeight,waitingWeight,energyWeight = routeOpt.assignValuesCombined(jsonData)
     routeOpt.routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight)
     return routeOpt.getCombinedOptimizationResults()
-#    return request.data
-#    return getCombinedOptimizationResults()
 
 @app.route('/charging-based', methods=['GET', 'POST'])
 def charging_based():
@@ -27,8 +25,7 @@ def charging_based():
     arrivalTime,departureTime,charRate,SOC_per_beg = chargeOpt.assignChargingRequest(jsonData)
     chargeOpt.charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg)
     return chargeOpt.getChargingOptimizationResults()
-#    return request.data
-#    return getChargingOptimizationResults()
+
 
 if __name__ == '__main__':
     app.run()
