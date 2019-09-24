@@ -13,9 +13,9 @@ import collections, json
 class RouteOptimizations:
     def assignValuesCombined(self,data):
         arrivalTime = data['arrivalTime']
-        drivingWeight = data['drivingWeight']
-        waitingWeight = data['waitingWeight']
-        energyWeight = data['energyWeight']
+        drivingWeight = data['minDrivingValue']
+        waitingWeight = data['minWaitingValue']
+        energyWeight = data['minEnergyValue']
         return arrivalTime,drivingWeight,waitingWeight,energyWeight
 
     def loadModel(self):
@@ -54,7 +54,6 @@ class RouteOptimizations:
         Energy consumption of the windshieldwipers
         Energy consumption of the lights
         """
-        
         arrivalDT = datetime.strptime(arrivalTime, '%Y-%m-%dT%H:%M')
         departureDT = arrivalDT - timedelta(hours=2)
         month = arrivalDT.month
@@ -62,28 +61,24 @@ class RouteOptimizations:
         self.hour = arrivalDT.hour
         self.minute = arrivalDT.minute
         timeArray = []
-        
         for i in range(departureDT.hour,arrivalDT.hour+1):
             array = [month,day,i,0,0,0,0,0,0,0]
             if (arrivalDT.isoweekday()<7):
                 array[arrivalDT.isoweekday()+4] = 1
             elif (arrivalDT.isoweekday() == 7):
                 array[4] = 1
-            timeArray.append(array)
-            
+            timeArray.append(array)    
         timeDF = pd.DataFrame(timeArray)
         timeRequest = np.array(timeDF)
         timeRequest = np.reshape(timeRequest, (timeRequest.shape[0], 1, timeRequest.shape[1]))
-        cityTime = cityModel.predict(timeRequest)
+        cityTime = self.cityModel.predict(timeRequest)
         cityTime = (cityTime/60).round(decimals=0)
-        highwayTime = highwayModel.predict(timeRequest)
+        highwayTime = self.highwayModel.predict(timeRequest)
         highwayTime = (highwayTime/60).round(decimals=0)
-    
         departureTimes = []
         for i in range(24):
             m = i*5
             departureTimes.append(departureDT + timedelta(minutes = m))
-        
         
         arrivalTimesCity = []
         for i in range(24):
@@ -109,7 +104,7 @@ class RouteOptimizations:
                 else:
                     continue
         arrCityDF = pd.DataFrame(arrivalTimesCity,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
-        
+        print('fine')
         arrivalTimesHighway = []
         for i in range(24):
             dep = departureTimes[i]
@@ -127,30 +122,30 @@ class RouteOptimizations:
                 pred = highwayTime[2][0]
                 arr = dep + timedelta(minutes=int(pred))
                 wait = (arrivalDT - arr).total_seconds() / 60
-                if arr.hour < arrivalDT.hour:
+                if arr.hour < self.hour:
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 elif (arr.hour == self.hour) & (arr.minute <= minute):
                     arrivalTimesHighway.append(['Highway',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
                 else:
-                    continue
-                
+                    continue        
         arrHighwayDF = pd.DataFrame(arrivalTimesHighway,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
+        print('fine')
         arrDF = arrCityDF.append(arrHighwayDF)   
         arrDF.columns = ['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'] 
         arrDF.index = range(len(arrDF))
     
-    
+        print('fine')    
         energyDF = timeDF.iloc[:,:3]
         energyRequest = np.array(energyDF)
         energyRequest = np.reshape(energyRequest, (energyRequest.shape[0], 1, energyRequest.shape[1]))
         precipitation = precipitationModel.predict(energyRequest)
         precipitation = precipitation > 0.5
         temperature = temperatureModel.predict(energyRequest)
-        
+        print('fine')
         whiperCons = getWhiperConsumption(precipitation,arrDF)
         lightCons = getLightConsumption(arrDF,self.hour)
         acCons = getAcConsumption(temperature,arrDF)
-        
+        print('fine')
         energyCons = []
         energyCost = []
         for i in range(len(whiperCons)):
@@ -275,12 +270,12 @@ class RouteOptimizations:
     
     def getCombinedOptimizationResults(self):
         results = collections.defaultdict();
-        results["desiredArrivalTime"] = hour +":"+ minute
-        results["recommendedRoute"] = recommendedRoute.Route
-        results["departureTIme"] = recommendedRoute.departureTimeHour +":"+ recommendedRoute.departureTimeMinute
-        results["arrivalTime"] = recommendedRoute.arrivalTimeHour +":"+recommendedRoute.arrivalTimeMinute
-        results["drivingTime:"] = recommendedRoute.travelTime
-        results["waitingTime:"] = recommendedRoute.waitingTime
-        results["energyPrice:"] = recommendedRoute.energyPrice
+        results["desiredArrivalTime"] = self.hour +":"+ self.minute
+        results["recommendedRoute"] = self.recommendedRoute.Route
+        results["departureTIme"] = self.recommendedRoute.departureTimeHour +":"+ self.recommendedRoute.departureTimeMinute
+        results["arrivalTime"] = self.recommendedRoute.arrivalTimeHour +":"+self.recommendedRoute.arrivalTimeMinute
+        results["drivingTime:"] = self.recommendedRoute.travelTime
+        results["waitingTime:"] = self.recommendedRoute.waitingTime
+        results["energyPrice:"] = self.recommendedRoute.energyPrice
     
         return json.dumps(results)
