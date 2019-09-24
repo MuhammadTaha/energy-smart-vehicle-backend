@@ -1,33 +1,31 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from chargingOptimization import ChargingOptimizations
-# from combinedOptimization import getCombinedOptimizationResults, assignValuesCombined, routeOptimization
+from combinedOptimization import RouteOptimizations
 import json
 
 app = Flask(__name__)
 CORS(app)
 
+routeOpt = RouteOptimizations()
+routeOpt.loadModel()
 chargeOpt = ChargingOptimizations()
-
 chargeOpt.loadModel()
 
 @app.route('/route-based', methods=['GET', 'POST'])
 def route_based():
-    # print(getCombinedOptimizationResults())
-    #assignRouteRequest(json.loads(request.data))
-    # jsonData = json.loads(request.data)
-    # arrivalTime,drivingWeight,waitingWeight,energyWeight = assignValuesCombined(jsonData)
-    # routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight)
-    # print(getCombinedOptimizationResults())
-    return request.data
-    # return getCombinedOptimizationResults()
+    jsonData = json.loads(request.data)
+    arrivalTime,drivingWeight,waitingWeight,energyWeight = routeOpt.assignValuesCombined(jsonData)
+    routeOpt.routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight)
+    return routeOpt.getCombinedOptimizationResults()
 
 @app.route('/charging-based', methods=['GET', 'POST'])
 def charging_based():
     jsonData = json.loads(request.data)
     arrivalTime,departureTime,charRate,SOC_per_beg = chargeOpt.assignChargingRequest(jsonData)
-    chargeOpt.charOptimization('2019-09-23T12:00','2019-09-23T22:00',charRate,SOC_per_beg)
+    chargeOpt.charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg)
     return chargeOpt.getChargingOptimizationResults()
+
 
 if __name__ == '__main__':
     app.run()
