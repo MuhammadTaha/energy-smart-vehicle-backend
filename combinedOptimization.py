@@ -18,19 +18,18 @@ def assignValuesCombined(data):
     return arrivalTime,drivingWeight,waitingWeight,energyWeight
 
 ### Solution
-def printSolution():
+def printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute):
     print('\n------------------------------------------------------------')
-    print('\nRecommendation for %s (%s.%s.%s):' % (recommendedRoute.Weekday,recommendedRoute.Day,recommendedRoute.Month,recommendedRoute.Year))
-    print('\nDesired arrival time: %s : %s' % (desiredArrivalTimeHour,desiredArrivalTimeMinute))
+    print('\nDesired arrival time: %s : %s' % (hour,minute))
     print("\nWeight driving time: %s  Weight waiting time: %s  Weight energy consumption: %s" % (drivingWeight,waitingWeight,energyWeight))
     print('\n------------------------------------------------------------')
-    print('\nRecommended Route: %s' % (recommendedRoute.Route))
-    print('\nDeparture Time: %s : %s' % (recommendedRoute.departureTimeHour, recommendedRoute.departureTimeMinute))
-    print('\nArrival Time: %g : %g' % (recommendedRoute.arrivalTimeHour, recommendedRoute.arrivalTimeMinute))
-    print('\nDriving Time: %g minutes' % (recommendedRoute.travelTime))
+    print('\nRecommended Route: %s' % (recommendedRoute.route))
+    print('\nDeparture Time: %s : %s' % (recommendedRoute.dep_H, recommendedRoute.dep_M))
+    print('\nArrival Time: %g : %g' % (recommendedRoute.arr_H, recommendedRoute.arr_M))
+    print('\nDriving Time: %g minutes' % (recommendedRoute.dri_T))
 #     print('\nShortest possible driving time: %g minutes' % (m.ObjVal))
-    print('\nWaiting Time: %g minutes' % (recommendedRoute.waitingTime))
-    print('\nEnergy Price: %g €' % (recommendedRoute.energyPrice))
+    print('\nWaiting Time: %g minutes' % (recommendedRoute.wai_T))
+    print('\nEnergy Price: %g €' % (recommendedRoute.eneCost))
 
 def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
     """
@@ -40,20 +39,20 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
     Energy consumption of the windshieldwipers
     Energy consumption of the lights
     """
-    temperatureModel = load_model('temperatureModel.h5')
-    precipitationModel = load_model('precipitationModel.h5')
-    cityModel = load_model('cityModel.h5')
-    highwayModel = load_model('highwayModel.h5')
+#     temperatureModel = load_model('./Forecasting Models/temperatureModel.h5')
+#     precipitationModel = load_model('./Forecasting Models/precipitationModel.h5')
+#     cityModel = load_model('./Forecasting Models/cityModel.h5')
+#     highwayModel = load_model('./Forecasting Models/highwayModel.h5')
     
     arrivalDT = datetime.strptime(arrivalTime, '%Y-%m-%dT%H:%M')
+    departureDT = arrivalDT - timedelta(hours=2)
     month = arrivalDT.month
     day = arrivalDT.day 
     hour = arrivalDT.hour
     minute = arrivalDT.minute
-    
     timeArray = []
     
-    for i in range(arrivalDT.hour - 2,arrivalDT.hour+1):
+    for i in range(departureDT.hour,arrivalDT.hour+1):
         array = [month,day,i,0,0,0,0,0,0,0]
         if (arrivalDT.isoweekday()<7):
             array[arrivalDT.isoweekday()+4] = 1
@@ -68,11 +67,12 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
     cityTime = (cityTime/60).round(decimals=0)
     highwayTime = highwayModel.predict(timeRequest)
     highwayTime = (highwayTime/60).round(decimals=0)
-    
+
     departureTimes = []
     for i in range(24):
         m = i*5
-        departureTimes.append(arrivalDT + timedelta(minutes = m))
+        departureTimes.append(departureDT + timedelta(minutes = m))
+    
     
     arrivalTimesCity = []
     for i in range(24):
@@ -97,8 +97,7 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
                 arrivalTimesCity.append(['City',dep.hour,dep.minute,arr.hour,arr.minute,pred,wait])
             else:
                 continue
-    
-    arrCityDF = pd.DataFrame(arrivalTimesCity,columns=['Route','depH','depM','arrH','arrM','drivingTime','waitingTime])
+    arrCityDF = pd.DataFrame(arrivalTimesCity,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
     
     arrivalTimesHighway = []
     for i in range(24):
@@ -124,10 +123,12 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
             else:
                 continue
             
-    arrHighwayDF = pd.DataFrame(arrivalTimesHighway,columns=['Route','depH','depM','arrH','arrM','drivingTime','waitingTime])
+    arrHighwayDF = pd.DataFrame(arrivalTimesHighway,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
     arrDF = arrCityDF.append(arrHighwayDF)   
-    arrDF.columns = ['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T']     
-    
+    arrDF.columns = ['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'] 
+    arrDF.index = range(len(arrDF))
+
+
     energyDF = timeDF.iloc[:,:3]
     energyRequest = np.array(energyDF)
     energyRequest = np.reshape(energyRequest, (energyRequest.shape[0], 1, energyRequest.shape[1]))
@@ -136,176 +137,50 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
     temperature = temperatureModel.predict(energyRequest)
     
     whiperCons = getWhiperConsumption(precipitation,arrDF)
-    lightCons = getLightConsumption(precipitation,arrDF,hour)
+    lightCons = getLightConsumption(arrDF,hour)
     acCons = getAcConsumption(temperature,arrDF)
     
-    EUC = []
+    energyCons = []
+    energyCost = []
     for i in range(len(whiperCons)):
-        EUC.append()
-    EUC = 4551
-    EL = 4181
-    unitPrice = 0.2774
-            
-    
-    #data = pd.read_csv('Dataset_goal_3_time_csv.csv',sep=';')
-    
-    ### Calcuate average travel time from max and min travel time
-    #city = list()
-    #highway = list()
-    #for row in np.arange(data.shape[0]):
-    #    #print('Scenario I average: ',sum(list(data.iloc[row,3:5].values))/2)
-    #    city.append(sum(list(data.iloc[row,3:5].values))/2)
-    #    
-    #    #print('Scenario II average: ',sum(list(data.iloc[row,6:].values))/2)
-    #    highway.append(sum(list(data.iloc[row,6:].values))/2)
-    #    
-    #data['averageTimeCity'] = city
-    #data['averageTimeHighway'] = highway
-    #
-    #### Split Columns
-    #
-    #daySplitted = data.Day.str.split(' - ', n = 1, expand=True)
-    #
-    #data['Weekday'] = daySplitted[0]
-    #data['Date'] = daySplitted[1]
-    #
-    #dateSplitted = data.Date.str.split('/',n=2, expand = True)
-    #
-    #data['Month'] = dateSplitted[0]
-    #data['Day'] = dateSplitted[1]
-    #data['Year'] = dateSplitted[2]
-    #
-    #timeSplitted = data['Departure time'].str.split(':',n=1, expand=True)
-    #
-    #data['Hour'] = timeSplitted[0]
-    #data['Minute'] = timeSplitted[1]
-    #
-    #temperature = pd.read_csv('temp.csv', sep='\t')
-    #temperature.columns = ['day','time','temperature']
-    #temperature = temperature.apply(lambda x: x.str.replace(',','.'))
-    #time = pd.DataFrame(temperature.time.str.split(':').tolist(),columns=['hour','minute','second'])
-    #temperature = temperature.merge(time,on=temperature.index)
-    #temperature.drop(columns = ['key_0','time'],inplace=True)
-    
-    ### User specified values
-    """
-    User selects a day and a desired arrival time
-    Possible days to select: Monday, Wednesday, Friday, Sunday
-    Driving data for 06:00 - 10:00
-    """
-    desiredArrivalTimeHour = arrivalDT.hour
-    desiredArrivalTimeMinute = arrivalDT.minute
-    """
-    Weight for the importance of driving and waiting time
-    Needs to be a value between 0 and 1
-    If weight is 0: Only waiting time is considered
-    If weight is 1: Only driving time is considered
-    """
-    #drivingWeight = 10
-    #waitingWeight = 1
-    #energyWeight = 3
-    
-    """
-    Prices for Driving Time and Waiting Time
-    """
-    
-    pricePerHour = 20
-    pricePerMinute = pricePerHour/60
-    
+        unitPrice = 0.2774
         
-    days = list(data.Weekday.drop_duplicates())
-        
-    tupledict_input = list()
-    N=10
-    for d in days:
-        tempData = data[data.Weekday == d]
-        for st in range(len(tempData)):
-            startingTime = tempData['Departure time'].values[st]
-            averageTravelTimeCity = tempData['averageTimeCity'].values[st]
-            averageTravelTimeHighway = tempData['averageTimeHighway'].values[st]
-            tupledict_input.append([('city', d, tempData.iloc[st,:].Year,tempData.iloc[st,:].Month,
-                                    tempData.iloc[st,:].Day,tempData.iloc[st,:].Hour,tempData.iloc[st,:].Minute), 
-                                    averageTravelTimeCity])
-            tupledict_input.append([('highway', d, tempData.iloc[st,:].Year,tempData.iloc[st,:].Month,
-                                    tempData.iloc[st,:].Day,tempData.iloc[st,:].Hour,tempData.iloc[st,:].Minute), 
-                                    averageTravelTimeHighway])
+        EUC = 4551 + whiperCons[i] + lightCons[i]
+        EL = 4181
+        total = EUC + acCons[i] + EL
+        cost = total * unitPrice / 1000
+        energyCons.append(total)
+        energyCost.append(cost)
+
+    pricePerHourDriving = 7.48
+    pricePerMinuteDriving = pricePerHourDriving/60
+    pricePerHourWaiting = 1.5 * pricePerHourDriving
+    pricePerMinuteWaiting = pricePerHourWaiting/60
     
-    times = tupledict(tupledict_input) 
-    relevantTimes = times.subset('*', selectedDay)
+    waitingCost = []
+    drivingCost = []
+    for i in range(len(arrDF)):
+        drivingCost.append(arrDF.dri_T[i] * pricePerMinuteDriving)
+        waitingCost.append(arrDF.wai_T[i] * pricePerMinuteWaiting)
     
-    ### calculate arrival time for each trip with min time
-    arrivalTime = list()
+    costMatrix = np.matrix((drivingCost,waitingCost,energyCost)).T
+    costDF = pd.DataFrame(costMatrix, columns = ['driCost','waiCost','eneCost'])
+    costDF['eneCost'] = costDF.eneCost.astype(float)
     
-    for t in relevantTimes.iteritems():
-    #     arrivalTime.append(datetime(int(t[0][2]),int(t[0][3]),int(t[0][4]),
-    #                              int(t[0][5]),int(t[0][6])) + timedelta(minutes = min_value))
-        arrivalTime.append(datetime(int(t[0][2]),int(t[0][3]),int(t[0][4]),
-                                 int(t[0][5]),int(t[0][6])) + timedelta(minutes = t[1]))    
-    
-    desiredArrivalTime = desiredArrivalTimeHour * 60 + desiredArrivalTimeMinute
-    arrivalTimeMinutes = [arrivalTime[x].hour * 60 + arrivalTime[x].minute for x in range(len(arrivalTime))]
+    DF = pd.merge(arrDF,costDF,on=arrDF.index)    
+    scenarioScores = DF.driCost * drivingWeight + DF.waiCost * waitingWeight + DF.eneCost * energyWeight
+    scores = list(scenarioScores)
+    best = scores.index(min(scores))
+    recommendedRoute = DF.iloc[best]
+    print(recommendedRoute)
     
     m = Model()
     
-    ### Create DataFrame with all possible routes and departure times
-    pddf = pd.DataFrame.from_dict(relevantTimes.items())
-    
-    pddfSplitted = pd.DataFrame(pddf[0].tolist(), index=pddf.index)
-    pddfSplitted.columns=['Route','Weekday','Year','Month','Day','departureTimeHour','departureTimeMinute']
-    pddfSplitted['travelTime']=pddf[1]
-    
-    ### Add arrival time
-    arrivalHour = [arrivalTime[x].hour for x in range(len(arrivalTime))]
-    arrivalMinute = [arrivalTime[x].minute for x in range(len(arrivalTime))]
-    
-    pddfSplitted['arrivalTimeHour'] = arrivalHour
-    pddfSplitted['arrivalTimeMinute'] = arrivalMinute
-    
-    pddfSplitted['temperature'] = 0
-    for i in range(len(pddfSplitted)):
-        for j in range(len(temperature)):
-            if (pddfSplitted.departureTimeHour[i] == temperature.hour[j]) & (pddfSplitted.departureTimeMinute[i] == temperature.minute[j]):
-                pddfSplitted.temperature[i] = temperature.temperature[j]
-    
-    ### Add waiting time
-    waitingTime = [desiredArrivalTime - arrivalTimeMinutes[x] for x in range(len(arrivalTimeMinutes))]
-    pddfSplitted['waitingTime'] = waitingTime
-    
-    ### Keep only scenarios where arrival is before goal time
-    possibleRecommendations = pddfSplitted[pddfSplitted.waitingTime >= 0]
-    possibleRecommendations.index = range(len(possibleRecommendations))
-    
-    ### energy min
-    
-
-    
-    possibleRecommendations['energyConsumption'] = 0
-    possibleRecommendations['energyPrice'] = 0
-    for i in range(len(possibleRecommendations)):
-        t = float(possibleRecommendations.temperature[i])
-    #     EC = 1.974*math.pow(t,2) - 44.889*t +4409.5
-        EC = -0.000002*math.pow(t,5)+0.0003*math.pow(t,4)-0.0214*math.pow(t,3)+0.5865*math.pow(t,2)-9.3772*t+290.39
-        possibleRecommendations.energyConsumption[i] = EC+EUC+EL
-        possibleRecommendations['energyPrice'][i] = possibleRecommendations.energyConsumption[i] * unitPrice / 1000
-        
-    possibleRecommendations['drivingPrice'] = possibleRecommendations.travelTime * pricePerMinute
-    possibleRecommendations['waitingPrice'] = possibleRecommendations.waitingTime * pricePerMinute 
-    
-    ### Scenario scores
-    # scenarioScores = possibleRecommendations.travelTime * weightDrivingTime + possibleRecommendations.waitingTime * weightWaitingTime
-    # recommendedRoute = possibleRecommendations.iloc[scenarioScores.idxmin()]
-    
-    scenarioScores = possibleRecommendations.drivingPrice * drivingWeight + possibleRecommendations.waitingPrice * waitingWeight + possibleRecommendations.energyPrice * energyWeight
-    recommendedRoute = possibleRecommendations.iloc[scenarioScores.idxmin()]
-    
-    
-    ### variable to choose only the minimum driving time
-    
     choice = list()
-    for x in range(len(relevantTimes)):
+    for x in range(len(DF)):
         choice.append(m.addVar(vtype=GRB.BINARY))
         
-    temp = relevantTimes.select()
+    temp = scores
     
     m.update()
     
@@ -315,7 +190,7 @@ def routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight):
     
     m.optimize()
     
-    printSolution()
+    printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute)
     
 def getWhiperConsumption(precipitation, arrDF):
     whiperConsumptionPerH = 0.06
@@ -356,19 +231,19 @@ def getLightConsumption(arrDF, hour):
     night = []
     for i in range(hour - 2, hour + 1):
         if (i < srH) | (i > ssH):
-            light.append(1)
+            night.append(1)
         else:
-            light.append(0)
+            night.append(0)
     
     dH = np.array(arrDF.dep_H) 
     aH = np.array(arrDF.arr_H)
     hs = np.unique(np.concatenate((dH,aH)))
     for i in range(len(arrDF)):
-        if day[np.where(hs == arrDF.dep_H[i])[0][0]] == 1 & arrDF.route == 'Highway':
+        if (night[np.where(hs == arrDF.dep_H[i])[0][0]] == 1) & (arrDF.route[i] == 'Highway'):
             lightConsumption.append(lightConsumptionHighwayNight)
-        elif day[np.where(hs == arrDF.dep_H[i])[0][0]] == 0 & arrDF.route == 'Highway':
+        elif (night[np.where(hs == arrDF.dep_H[i])[0][0]] == 0) & (arrDF.route[i] == 'Highway'):
             lightConsumption.append(lightConsumptionHighwayDay)
-        elif day[np.where(hs == arrDF.dep_H[i])[0][0]] == 1 & arrDF.route == 'City':
+        elif (night[np.where(hs == arrDF.dep_H[i])[0][0]] == 1) & (arrDF.route[i] == 'City'):
             lightConsumption.append(lightConsumptionCityNight)
         else:
             lightConsumption.append(lightConsumptionCityDay)
@@ -383,15 +258,10 @@ def getAcConsumption(temperature,arrDF):
     hs = np.unique(np.concatenate((dH,aH)))
     
     for i in range(len(arrDF)):
-        t = temperature[np.where(hd == arrDF.dep_H[i])[0][0]]
+        t = temperature[np.where(hs == arrDF.dep_H[i])[0][0]]
         EC = -0.000002*math.pow(t,5)+0.0003*math.pow(t,4)-0.0214*math.pow(t,3)+0.5865*math.pow(t,2)-9.3772*t+290.39
         acConsumption.append(EC)
-    
-    return acConsumption
-    
-
-        
-            
+    return acConsumption        
 
 def getCombinedOptimizationResults():
     results = collections.defaultdict();
