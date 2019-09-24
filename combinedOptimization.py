@@ -19,11 +19,11 @@ class RouteOptimizations:
         return arrivalTime,drivingWeight,waitingWeight,energyWeight
 
     def loadModel(self):
-        self.energyModel = load_model('.\Forecasting Models\energyModel.h5')
+        self.temperatureModel = load_model('.\Forecasting Models\\temperatureModel.h5')
         self.precipitationModel = load_model('.\Forecasting Models\precipitationModel.h5')
         self.cityModel = load_model('.\Forecasting Models\cityModel.h5')
         self.highwayModel = load_model('.\Forecasting Models\highwayModel.h5')
-        self.energyModel._make_predict_function()
+        self.temperatureModel._make_predict_function()
         self.precipitationModel._make_predict_function()
         self.cityModel._make_predict_function()
         self.highwayModel._make_predict_function()
@@ -35,18 +35,18 @@ class RouteOptimizations:
     day = 0
     
     ### Solution
-    def printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute):
-        print('\n------------------------------------------------------------')
-        print('\nDesired arrival time: %s : %s' % (hour,minute))
-        print("\nWeight driving time: %s  Weight waiting time: %s  Weight energy consumption: %s" % (drivingWeight,waitingWeight,energyWeight))
-        print('\n------------------------------------------------------------')
-        print('\nRecommended Route: %s' % (recommendedRoute.route))
-        print('\nDeparture Time: %s : %s' % (recommendedRoute.dep_H, recommendedRoute.dep_M))
-        print('\nArrival Time: %g : %g' % (recommendedRoute.arr_H, recommendedRoute.arr_M))
-        print('\nDriving Time: %g minutes' % (recommendedRoute.dri_T))
-    #     print('\nShortest possible driving time: %g minutes' % (m.ObjVal))
-        print('\nWaiting Time: %g minutes' % (recommendedRoute.wai_T))
-        print('\nEnergy Price: %g €' % (recommendedRoute.eneCost))
+    # def printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute):
+    #     print('\n------------------------------------------------------------')
+    #     print('\nDesired arrival time: %s : %s' % (hour,minute))
+    #     print("\nWeight driving time: %s  Weight waiting time: %s  Weight energy consumption: %s" % (drivingWeight,waitingWeight,energyWeight))
+    #     print('\n------------------------------------------------------------')
+    #     print('\nRecommended Route: %s' % (recommendedRoute.route))
+    #     print('\nDeparture Time: %s : %s' % (recommendedRoute.dep_H, recommendedRoute.dep_M))
+    #     print('\nArrival Time: %g : %g' % (recommendedRoute.arr_H, recommendedRoute.arr_M))
+    #     print('\nDriving Time: %g minutes' % (recommendedRoute.dri_T))
+    # #     print('\nShortest possible driving time: %g minutes' % (m.ObjVal))
+    #     print('\nWaiting Time: %g minutes' % (recommendedRoute.wai_T))
+    #     print('\nEnergy Price: %g €' % (recommendedRoute.eneCost))
     
     def routeOptimization(self,arrivalTime,drivingWeight,waitingWeight,energyWeight):
         """
@@ -152,13 +152,20 @@ class RouteOptimizations:
         energyCost = []
         for i in range(len(whiperCons)):
             unitPrice = 0.2774
-            
-            EUC = 4551 + whiperCons[i] + lightCons[i]
-            EL = 4181
-            total = EUC + acCons[i] + EL
-            cost = total * unitPrice / 1000
-            energyCons.append(total)
-            energyCost.append(cost)
+            if (arrDF.route[i] == 'City'):
+                EUC = whiperCons[i] + lightCons[i]
+                EL = 1458
+                total = EUC + acCons[i] + EL
+                cost = total * unitPrice / 1000
+                energyCons.append(total)
+                energyCost.append(cost)
+            else:
+                EUC = whiperCons[i] + lightCons[i]
+                EL = 3025
+                total = EUC + acCons[i] + EL
+                cost = total * unitPrice / 1000
+                energyCons.append(total)
+                energyCost.append(cost)
     
         pricePerHourDriving = 7.48
         pricePerMinuteDriving = pricePerHourDriving/60
@@ -171,12 +178,20 @@ class RouteOptimizations:
             drivingCost.append(arrDF.dri_T[i] * pricePerMinuteDriving)
             waitingCost.append(arrDF.wai_T[i] * pricePerMinuteWaiting)
         
-        costMatrix = np.matrix((drivingCost,waitingCost,energyCost)).T
-        costDF = pd.DataFrame(costMatrix, columns = ['driCost','waiCost','eneCost'])
+        costMatrix = np.matrix((energyCons,drivingCost,waitingCost,energyCost)).T
+        costDF = pd.DataFrame(costMatrix, columns = ['eneCons','driCost','waiCost','eneCost'])
         costDF['eneCost'] = costDF.eneCost.astype(float)
-        
-        DF = pd.merge(arrDF,costDF,on=arrDF.index)    
-        scenarioScores = DF.driCost * self.drivingWeight + DF.waiCost * self.waitingWeight + DF.eneCost * self.energyWeight
+        costDF['eneCons'] = costDF.eneCons.astype(float)
+
+        DF = pd.merge(arrDF,costDF,on=arrDF.index)
+
+        a = DF.driCost.values * int(drivingWeight)
+        b = DF.waiCost.values * int(waitingWeight)
+        c = DF.eneCost.values * int(energyWeight)
+
+        scenarioScores = a + b + c
+
+        # scenarioScores = DF.driCost * drivingWeight + DF.waiCost * waitingWeight + DF.eneCost * energyWeight
         scores = list(scenarioScores)
         best = scores.index(min(scores))
         self.recommendedRoute = DF.iloc[best]
@@ -197,7 +212,7 @@ class RouteOptimizations:
         
         m.optimize()
         
-        printSolution(self.hour,self.minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute)
+        # printSolution(self.hour,self.minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute)
         
     def getWhiperConsumption(self,precipitation, arrDF):
         whiperConsumptionPerH = 0.06
@@ -270,13 +285,16 @@ class RouteOptimizations:
         return acConsumption        
     
     def getCombinedOptimizationResults(self):
-        results = collections.defaultdict();
-        results["desiredArrivalTime"] = self.hour +":"+ self.minute
-        results["recommendedRoute"] = self.recommendedRoute.Route
-        results["departureTIme"] = self.recommendedRoute.departureTimeHour +":"+ self.recommendedRoute.departureTimeMinute
-        results["arrivalTime"] = self.recommendedRoute.arrivalTimeHour +":"+self.recommendedRoute.arrivalTimeMinute
-        results["drivingTime:"] = self.recommendedRoute.travelTime
-        results["waitingTime:"] = self.recommendedRoute.waitingTime
-        results["energyPrice:"] = self.recommendedRoute.energyPrice
-    
+        results = collections.defaultdict()
+        results["desiredArrivalTime"] = str(self.hour) + ":" + str(self.minute)
+        results["recommendedRoute"] = self.recommendedRoute.route
+        results["departureTIme"] = str(self.recommendedRoute.dep_H) +":"+ str(self.recommendedRoute.dep_M)
+        results["arrivalTime"] = str(self.recommendedRoute.arr_H) +":"+ str(self.recommendedRoute.arr_M)
+        results["drivingTime"] = self.recommendedRoute.dri_T
+        results["waitingTime"] = self.recommendedRoute.wai_T
+        results["energyPrice"] = round(self.recommendedRoute.eneCost,2)
+        results["energyConsumed"] = round(self.recommendedRoute.eneCons/1000 ,2)
+        results["waitingCost"] = round(self.recommendedRoute.waiCost ,2)
+        results["drivingCost"] = round(self.recommendedRoute.driCost ,2)
+
         return json.dumps(results)
