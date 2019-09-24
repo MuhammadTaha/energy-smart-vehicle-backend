@@ -2,10 +2,10 @@ from gurobipy import *
 from datetime import datetime
 from keras.models import load_model
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import json
 import collections
-import config
 
 
 def assignChargingRequest(data):
@@ -16,28 +16,28 @@ def assignChargingRequest(data):
 #    self.SOC_per_end = data['']
     return arrivalTime,departureTime,charRate,SOC_per_beg
 
-def printSolution():
-    if mDynamic.status == GRB.Status.OPTIMAL:
-        print('\n----------------------------------------------------------------\n')
-        print('\nTotal energy transferred: %g kW' % sumTransferedEnergy)
-        print('\nMinimal Charging Cost: %g ct' % mDynamic.objVal)
-        print('\nTotal used charging time: %g h' % realChargingDuration)
-        print('\nEnergy transferred during each hour:')
-        chargex = mDynamic.getAttr('x', chargingRate)
-        for t in np.arange(8):
-            print('\n%s: %g kW - %f ct/kW' % (t, chargex[t], chargingPrices[t][0]))
-        print('\n----------------------------------------------------------------\n')
-        print('\nCharging costs using retail prices: %s ct' % (retailChargingCosts))
-    else:
-        print('No solution')
+# def printSolution():
+#     if mDynamic.status == GRB.Status.OPTIMAL:
+#         print('\n----------------------------------------------------------------\n')
+#         print('\nTotal energy transferred: %g kW' % sumTransferedEnergy)
+#         print('\nMinimal Charging Cost: %g ct' % mDynamic.objVal)
+#         print('\nTotal used charging time: %g h' % realChargingDuration)
+#         print('\nEnergy transferred during each hour:')
+#         chargex = mDynamic.getAttr('x', chargingRate)
+#         for t in np.arange(8):
+#             print('\n%s: %g kW - %f ct/kW' % (t, chargex[t], chargingPrices[t][0]))
+#         print('\n----------------------------------------------------------------\n')
+#         print('\nCharging costs using retail prices: %s ct' % (retailChargingCosts))
+#     else:
+#         print('No solution')
 
-def charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg):
+def charOptimization(arrivalTime,departureTime,charRate,SoC_per_beg):
     arrivalDT = datetime.strptime(arrivalTime, '%Y-%m-%dT%H:%M')
     departureDT = datetime.strptime(departureTime, '%Y-%m-%dT%H:%M')
     month = arrivalDT.month
     day = arrivalDT.day 
     delta = departureDT - arrivalDT
-    chargingDuration = int(delta.total_seconds()/60)
+    chargingDuration = int(delta.total_seconds()/3600)
     
     valueArray = []
     
@@ -48,13 +48,14 @@ def charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg):
         elif (arrivalDT.isoweekday() == 7):
             array[4] = 1
         valueArray.append(array)
-        
+    
+    model = load_model('.\Forecasting Models\energyModel.h5')
+    
     valueDF = pd.DataFrame(valueArray)
     request = np.array(valueDF)
     request = np.reshape(request, (request.shape[0], 1, request.shape[1]))
     varPrices = model.predict(request)
     
-    model = load_model('\Forecasting Models\energyModel.h5')
     
     
     # Car specs: BMW I3
@@ -89,8 +90,7 @@ def charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg):
     #          4.3, 5.23, 5.24, 4.89, 4.54, 4.53,
     #          4.41, 4.18, 4.14, 4.07, 4.13, 4.37,
     #          4.8, 5.59, 5.7, 5.47, 5.22, 4.36]
-    prices = [v + fixedPrice for v in varPrices]
-    
+    prices = [(v + fixedPrice).tolist() for v in varPrices]
     
     '''
     Retail price taken from https://www.vattenfall.de/stromtarife/strom-natur24 (Access: 14.07.2019)
@@ -107,8 +107,7 @@ def charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg):
     chargingInterval = np.arange(chargingDuration)
     realChargingDuration = sumTransferedEnergy/charRate
     #chargingPrices = prices[startTime:endTime]
-    chargingPrices = prices
-    
+    chargingPrices = np.round(prices,2)
     
     ### Variables
     chargingRate = list()
@@ -123,17 +122,8 @@ def charOptimization(arrivalTime,departureTime,charRate,SOC_per_beg):
     ### Objective Function
     mDynamic.setObjective(quicksum(chargingPrices[t][0]*chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
     mDynamic.optimize()
-    printSolution()
+#     printSolution()
     
     chargingActivity = mDynamic.getAttr('x', chargingRate)
     
