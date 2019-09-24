@@ -42,6 +42,7 @@ class ChargingOptimizations:
     realChargingDuration = 0.0
     retailChargingCosts = 0.0
     chargingPrices = []
+    dynamicObjVal = 0
 
     def loadModel(self):
         self.model = load_model('.\Forecasting Models\energyModel.h5')
@@ -91,7 +92,7 @@ class ChargingOptimizations:
         ### Energy needed
         SoC_beg = battCap * SoC_per_beg
         SoC_end = battCap * SoC_per_end
-        sumTransferedEnergy = float(SoC_end) - float(SoC_beg)
+        self.sumTransferedEnergy = float(SoC_end) - float(SoC_beg)
 
         '''
         Dynamic Price data taken from https://www.awattar.de/ (09.07.2019)
@@ -116,14 +117,14 @@ class ChargingOptimizations:
         '''
         retailPrice = 27.74
 
-        retailChargingCosts = sumTransferedEnergy * retailPrice
+        self.retailChargingCosts = self.sumTransferedEnergy * retailPrice
 
         ### Charging time & prices
         #chargingDuration = endTime - startTime
         chargingInterval = np.arange(chargingDuration)
-        realChargingDuration = sumTransferedEnergy / float(charRate)
+        self.realChargingDuration = self.sumTransferedEnergy / float(charRate)
         #chargingPrices = prices[startTime:endTime]
-        chargingPrices = np.round(prices,2)
+        self.chargingPrices = np.round(prices,2)
 
 
         ### Variables
@@ -131,12 +132,12 @@ class ChargingOptimizations:
             self.chargingRate.append(self.mDynamic.addVar(vtype='C', lb=0.0, ub=float(charRate)))
 
         ### Constraints
-        self.mDynamic.addConstr((quicksum(self.chargingRate) == sumTransferedEnergy))
+        self.mDynamic.addConstr((quicksum(self.chargingRate) == self.sumTransferedEnergy))
 
         self.mDynamic.update()
 
         ### Objective Function
-        self.mDynamic.setObjective(quicksum(chargingPrices[t][0]*self.chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
+        self.mDynamic.setObjective(quicksum(self.chargingPrices[t][0] * self.chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
 
         self.mDynamic.optimize()
     #     printSolution()
@@ -158,7 +159,7 @@ class ChargingOptimizations:
         results = collections.defaultdict();
         resultsChargingPrice = collections.defaultdict();
         results["sumTransferedEnergy"] = self.sumTransferedEnergy
-        results["minimumChargingCost"] = self.mDynamic.objVal
+        results["minimumChargingCost"] = self.mDynamic.ObjVal
         results["UsedChargingTime"] = self.realChargingDuration
         results["RetailChargingCost"] = self.retailChargingCosts
         chargex = self.mDynamic.getAttr('x', self.chargingRate)
