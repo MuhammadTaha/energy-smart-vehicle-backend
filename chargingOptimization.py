@@ -144,11 +144,11 @@ class ChargingOptimizations:
         # chargingActivity = mDynamic.getAttr('x', chargingRate)
 
         ### time_slots = ['0-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8']
-        timeSlots = [str(chargingPrices[x][0]) for x in range(chargingDuration)]
+        # timeSlots = [str(chargingPrices[x][0]) for x in range(chargingDuration)]
         # plt.bar(timeSlots,chargingActivity)
-        plt.ylabel('TRANSFERRED ENERGY (kW)')
-        plt.xlabel('ENERGY PRICE (ct/kW)')
-        plt.title('CHARGING ACTIVITY')
+        # plt.ylabel('TRANSFERRED ENERGY (kW)')
+        # plt.xlabel('ENERGY PRICE (ct/kW)')
+        # plt.title('CHARGING ACTIVITY')
 
         # plt.show()
 
@@ -161,10 +161,10 @@ class ChargingOptimizations:
         results["minimumChargingCost"] = self.mDynamic.objVal
         results["UsedChargingTime"] = self.realChargingDuration
         results["RetailChargingCost"] = self.retailChargingCosts
-        # chargex = mDynamic.getAttr('x', chargingRate)
-        # results["ChargingPrices"] = {}
-        # for t in np.arange(8):
-        #     resultsChargingPrice.setdefault(chargex[t], []).append(chargingPrices[t])
-        #
-        # results["ChargingPrices"] = resultsChargingPrice
+        chargex = self.mDynamic.getAttr('x', self.chargingRate)
+        results["ChargingPrices"] = {}
+        for t in np.arange(8):
+            resultsChargingPrice.setdefault(chargex[t], []).append(self.chargingPrices[t])
+
+        results["ChargingPrices"] = resultsChargingPrice
         return json.dumps(results)
