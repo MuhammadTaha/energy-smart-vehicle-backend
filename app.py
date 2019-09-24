@@ -11,10 +11,10 @@ CORS(app)
 def route_based():
     # print(getCombinedOptimizationResults())
     #assignRouteRequest(json.loads(request.data))
-    jsonData = json.loads(request.data)
-    arrivalTime,drivingWeight,waitingWeight,energyWeight = assignValuesCombined(jsonData)
-    routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight)
-    print(getCombinedOptimizationResults())
+    # jsonData = json.loads(request.data)
+    # arrivalTime,drivingWeight,waitingWeight,energyWeight = assignValuesCombined(jsonData)
+    # routeOptimization(arrivalTime,drivingWeight,waitingWeight,energyWeight)
+    # print(getCombinedOptimizationResults())
     return request.data
     # return getCombinedOptimizationResults()
 

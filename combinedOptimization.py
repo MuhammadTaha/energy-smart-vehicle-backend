@@ -11,7 +11,7 @@ import time
 import collections, json
 
 def assignValuesCombined(data):
-    arrivalTime = 2019-09-24T16:00'
+    arrivalTime = '2019-09-24T16:00'
     drivingWeight = 8
     waitingWeight = 8
     energyWeight = 8
