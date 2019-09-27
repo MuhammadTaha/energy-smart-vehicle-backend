@@ -11,13 +11,16 @@ import time
 import collections, json
 
 class RouteOptimizations:
+
+    ### Assign all user defined values from the GUI
     def assignValuesCombined(self,data):
         arrivalTime = data['arrivalTime']
         drivingWeight = data['minDrivingValue']
         waitingWeight = data['minWaitingValue']
         energyWeight = data['minEnergyValue']
         return arrivalTime,drivingWeight,waitingWeight,energyWeight
-
+    
+    ### Load all forecasting models
     def loadModel(self):
         self.temperatureModel = load_model('.\Forecasting Models\\temperatureModel.h5')
         self.precipitationModel = load_model('.\Forecasting Models\precipitationModel.h5')
@@ -48,9 +51,11 @@ class RouteOptimizations:
         self.day = arrivalDT.day 
         self.hour = arrivalDT.hour
         self.minute = arrivalDT.minute
+        
+        ### Array with possible departure hours
         timeArray = []
         for i in range(departureDT.hour,arrivalDT.hour+1):
-            array = [self.month,self.day,i,0,0,0,0,0,0,0]
+            array = [self.month,self.day,i,0,0,0,0,0,0,0] # input for forecasting models: Month, Day, Hour, Weekday(Sunday, Monday, Tuesday ...)
             if (arrivalDT.isoweekday()<7):
                 array[arrivalDT.isoweekday()+4] = 1
             elif (arrivalDT.isoweekday() == 7):
@@ -59,8 +64,11 @@ class RouteOptimizations:
         timeDF = pd.DataFrame(timeArray)
         timeRequest = np.array(timeDF)
         timeRequest = np.reshape(timeRequest, (timeRequest.shape[0], 1, timeRequest.shape[1]))
+        
+        ### Forecast driving times for city
         cityTime = self.cityModel.predict(timeRequest)
         cityTime = (cityTime/60).round(decimals=0)
+        ### Forecast driving times for highway
         highwayTime = self.highwayModel.predict(timeRequest)
         highwayTime = (highwayTime/60).round(decimals=0)
         departureTimes = []
@@ -68,6 +76,7 @@ class RouteOptimizations:
             m = i*5
             departureTimes.append(departureDT + timedelta(minutes = m))
         
+        ### Arrival times for the predicted driving times (City)
         arrivalTimesCity = []
         for i in range(24):
             dep = departureTimes[i]
@@ -92,6 +101,8 @@ class RouteOptimizations:
                 else:
                     continue
         arrCityDF = pd.DataFrame(arrivalTimesCity,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
+        
+        ### Arrival times for the predicted driving times (Highway)
         arrivalTimesHighway = []
         for i in range(24):
             dep = departureTimes[i]
@@ -123,14 +134,19 @@ class RouteOptimizations:
         energyDF = timeDF.iloc[:,:3]
         energyRequest = np.array(energyDF)
         energyRequest = np.reshape(energyRequest, (energyRequest.shape[0], 1, energyRequest.shape[1]))
+        ### Forecast precipitation for every hour
         precipitation = self.precipitationModel.predict(energyRequest)
-        precipitation = precipitation > 0.5
+        precipitation = precipitation > 0.5 #Precipitation: True if >0.5, else False
+        ### Forecast temperature
         temperature = self.temperatureModel.predict(energyRequest)
+        ### Get energy consumption of controllable and uncontrollable loads
         whiperCons = self.getWhiperConsumption(precipitation,arrDF)
         lightCons = self.getLightConsumption(arrDF,self.hour)
         acCons = self.getAcConsumption(temperature,arrDF)
         energyCons = []
         energyCost = []
+        
+        ### Combine all loads to total energy consumption
         for i in range(len(whiperCons)):
             unitPrice = 0.2774
             if (arrDF.route[i] == 'City'):
@@ -153,6 +169,7 @@ class RouteOptimizations:
         pricePerHourWaiting = 1.5 * pricePerHourDriving
         pricePerMinuteWaiting = pricePerHourWaiting/60
         
+        ### Monetarize driving and waiting time
         waitingCost = []
         drivingCost = []
         for i in range(len(arrDF)):
@@ -163,18 +180,20 @@ class RouteOptimizations:
         costDF = pd.DataFrame(costMatrix, columns = ['eneCons','driCost','waiCost','eneCost'])
         costDF['eneCost'] = costDF.eneCost.astype(float)
         costDF['eneCons'] = costDF.eneCons.astype(float)
-
+    
         DF = pd.merge(arrDF,costDF,on=arrDF.index)
-
+        
+        ### Multiply each cost with corresponding weight
         a = DF.driCost.values * int(drivingWeight)
         b = DF.waiCost.values * int(waitingWeight)
         c = DF.eneCost.values * int(energyWeight)
 
         scenarioScores = a + b + c
 
-        # scenarioScores = DF.driCost * drivingWeight + DF.waiCost * waitingWeight + DF.eneCost * energyWeight
+        ### scenarioScores = DF.driCost * drivingWeight + DF.waiCost * waitingWeight + DF.eneCost * energyWeight
         scores = list(scenarioScores)
         best = scores.index(min(scores))
+        ### Recommend route with lowest total score
         self.recommendedRoute = DF.iloc[best]
         
         m = Model()
@@ -194,7 +213,8 @@ class RouteOptimizations:
         m.optimize()
         
         # printSolution(self.hour,self.minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute)
-        
+    
+    ### Get energy consumption of the whipers
     def getWhiperConsumption(self,precipitation, arrDF):
         whiperConsumptionPerH = 0.06
         
@@ -217,7 +237,7 @@ class RouteOptimizations:
                     whiperConsumption.append(cons1+cons2)
         
         return whiperConsumption
-    
+    ### Get energy consumption of the lights
     def getLightConsumption(self,arrDF, hour):
         lightConsumption = []
         lightConsumptionHighwayDay = 20.89
@@ -225,6 +245,7 @@ class RouteOptimizations:
         lightConsumptionCityDay = 13.67
         lightConsumptionCityNight = 34.92
         
+        ### Data of Sunrise and Sunset in Berlin
         sunData = pd.read_csv('sun.csv',index_col=[0])
         sunDataRel = sunData[(sunData.month == self.month) & (sunData.day == self.day)]
         
@@ -251,7 +272,8 @@ class RouteOptimizations:
                 lightConsumption.append(lightConsumptionCityDay)
                 
         return lightConsumption
-                
+    
+    ### Get energy consumption of the AC
     def getAcConsumption(self,temperature,arrDF):
         acConsumption = []
         
@@ -265,6 +287,7 @@ class RouteOptimizations:
             acConsumption.append(EC)
         return acConsumption        
     
+    ### Output to GUI
     def getCombinedOptimizationResults(self):
         results = collections.defaultdict()
         results["desiredArrivalTime"] = str(self.hour) + ":" + str(self.minute)
