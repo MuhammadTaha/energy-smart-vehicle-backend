@@ -11,7 +11,7 @@ from keras.models import load_model, Sequential
 
 
 class ChargingOptimizations:
-
+    ### Assign all user defined values from the GUI
     def assignChargingRequest(self,data):
         arrivalTime = data['arrivalTime']
         departureTime = data['departureTime']
@@ -26,7 +26,7 @@ class ChargingOptimizations:
     realChargingDuration = 0.0
     retailChargingCosts = 0.0
     chargingPrices = []
-
+    ### Load all forecasting models
     def loadModel(self):
         self.model = load_model('.\Forecasting Models\energyModel.h5')
         self.model._make_predict_function()
@@ -41,7 +41,8 @@ class ChargingOptimizations:
         chargingDuration = int(delta.total_seconds()/3600)
 
         valueArray = []
-
+        
+        ### Array with all charging hours
         for i in range(arrivalDT.hour,departureDT.hour):
             array = [month,day,i,0,0,0,0,0,0,0]
             if (arrivalDT.isoweekday()<7):
@@ -54,7 +55,8 @@ class ChargingOptimizations:
         valueDF = pd.DataFrame(valueArray)
         request = np.array(valueDF)
         request = np.reshape(request, (request.shape[0], 1, request.shape[1]))
-        print(request)
+        
+        ### Forecast energy prices
         varPrices = self.model.predict(request)
         varPrices = varPrices/10
 
@@ -72,7 +74,7 @@ class ChargingOptimizations:
         Basic montly fee: 13.33€
         
         '''
-
+        ### Add fixed price to variable price
         fixedPrice = 19.61
         prices = [(v + fixedPrice).tolist() for v in varPrices]
 
@@ -105,7 +107,7 @@ class ChargingOptimizations:
         self.mDynamic.setObjective(quicksum(self.chargingPrices[t][0]*self.chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
 
         self.mDynamic.optimize()
-
+    ### Output to GUI
     def getChargingOptimizationResults(self):
         results = {}
         resultsChargingPrice = collections.defaultdict()
