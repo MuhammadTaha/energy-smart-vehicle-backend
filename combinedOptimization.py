@@ -34,20 +34,6 @@ class RouteOptimizations:
     month = 0
     day = 0
     
-    ### Solution
-    # def printSolution(hour,minute,drivingWeight,waitingWeight,energyWeight,recommendedRoute):
-    #     print('\n------------------------------------------------------------')
-    #     print('\nDesired arrival time: %s : %s' % (hour,minute))
-    #     print("\nWeight driving time: %s  Weight waiting time: %s  Weight energy consumption: %s" % (drivingWeight,waitingWeight,energyWeight))
-    #     print('\n------------------------------------------------------------')
-    #     print('\nRecommended Route: %s' % (recommendedRoute.route))
-    #     print('\nDeparture Time: %s : %s' % (recommendedRoute.dep_H, recommendedRoute.dep_M))
-    #     print('\nArrival Time: %g : %g' % (recommendedRoute.arr_H, recommendedRoute.arr_M))
-    #     print('\nDriving Time: %g minutes' % (recommendedRoute.dri_T))
-    # #     print('\nShortest possible driving time: %g minutes' % (m.ObjVal))
-    #     print('\nWaiting Time: %g minutes' % (recommendedRoute.wai_T))
-    #     print('\nEnergy Price: %g €' % (recommendedRoute.eneCost))
-    
     def routeOptimization(self,arrivalTime,drivingWeight,waitingWeight,energyWeight):
         """
         Values to get from forecasting:
@@ -106,7 +92,6 @@ class RouteOptimizations:
                 else:
                     continue
         arrCityDF = pd.DataFrame(arrivalTimesCity,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
-        print('fine')
         arrivalTimesHighway = []
         for i in range(24):
             dep = departureTimes[i]
@@ -131,23 +116,19 @@ class RouteOptimizations:
                 else:
                     continue        
         arrHighwayDF = pd.DataFrame(arrivalTimesHighway,columns=['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'])
-        print('fine')
-        arrDF = arrCityDF.append(arrHighwayDF)   
+        arrDF = arrCityDF.append(arrHighwayDF)
         arrDF.columns = ['route','dep_H','dep_M','arr_H','arr_M','dri_T','wai_T'] 
         arrDF.index = range(len(arrDF))
     
-        print('fine')    
         energyDF = timeDF.iloc[:,:3]
         energyRequest = np.array(energyDF)
         energyRequest = np.reshape(energyRequest, (energyRequest.shape[0], 1, energyRequest.shape[1]))
         precipitation = self.precipitationModel.predict(energyRequest)
         precipitation = precipitation > 0.5
         temperature = self.temperatureModel.predict(energyRequest)
-        print('fine')
         whiperCons = self.getWhiperConsumption(precipitation,arrDF)
         lightCons = self.getLightConsumption(arrDF,self.hour)
         acCons = self.getAcConsumption(temperature,arrDF)
-        print('fine')
         energyCons = []
         energyCost = []
         for i in range(len(whiperCons)):

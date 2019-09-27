@@ -11,7 +11,6 @@ timesteps = 8
 num_classes = 10
 
 def get_data(normalized=0):
-#    col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","marketprice [Euro/MWh]","CityRouteTime(sec) - distance 10.8km","HighwayRouteTime(sec) - distance 16.5 km"]
     col_names = ['s_year','Day', 'Day_or_Night',"Precipitation_Qty","energyprice","HighwayRoute"]
     stocks = pd.read_csv(r"Master_Dataset_Final.csv", encoding = "ISO-8859-1" , header=0)
     stocks.columns = ['s_year', 's_month', 'e_day', 's_hour', 'Day', 'DayNum', 'Day_or_Night',
@@ -83,9 +82,7 @@ p = model.predict(testX)
 
 model.save('cityModel.h5')  # creates a HDF5 file 'my_model.h5'
 
-
 val = np.array(p)
-print(p)
 
 plt2.plot(np.array(p),color='red', label='prediction')
 

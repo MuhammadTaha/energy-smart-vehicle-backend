@@ -17,7 +17,6 @@ class ChargingOptimizations:
         departureTime = data['departureTime']
         charRate = float(data['powerSelection'])
         SOC_per_beg = float(data['chargingStatus'])/100
-    #    self.SOC_per_end = data['']
         return arrivalTime,departureTime,charRate,SOC_per_beg
 
 
@@ -89,10 +88,8 @@ class ChargingOptimizations:
         self.retailChargingCosts = self.sumTransferedEnergy * retailPrice
 
         ### Charging time & prices
-        #chargingDuration = endTime - startTime
         chargingInterval = np.arange(chargingDuration)
         realChargingDuration = self.sumTransferedEnergy / float(charRate)
-        #chargingPrices = prices[startTime:endTime]
         self.chargingPrices = np.round(prices,2)
 
         ### Variables
@@ -108,20 +105,6 @@ class ChargingOptimizations:
         self.mDynamic.setObjective(quicksum(self.chargingPrices[t][0]*self.chargingRate[t] for t in chargingInterval), GRB.MINIMIZE)
 
         self.mDynamic.optimize()
-    #     printSolution()
-
-        # chargingActivity = mDynamic.getAttr('x', chargingRate)
-
-        ### time_slots = ['0-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8']
-        # timeSlots = [str(chargingPrices[x][0]) for x in range(chargingDuration)]
-        # plt.bar(timeSlots,chargingActivity)
-        # plt.ylabel('TRANSFERRED ENERGY (kW)')
-        # plt.xlabel('ENERGY PRICE (ct/kW)')
-        # plt.title('CHARGING ACTIVITY')
-
-        # plt.show()
-
-
 
     def getChargingOptimizationResults(self):
         results = {}

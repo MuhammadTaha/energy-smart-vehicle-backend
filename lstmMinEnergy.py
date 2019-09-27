@@ -21,22 +21,9 @@ def get_data(normalized=0):
 data = get_data()
 
 train_size = int(len(data) * 0.8)
-# train, test = data[0:train_size], data[train_size:len(data)]
-# rs = ShuffleSplit(n_splits=5, random_state=0, test_size=0.25, train_size=None)
-# train, test = rs.get_n_splits(data)
-
-# print('Observations: %d' % (len(data)))
-# print('Training Observations: %d' % (len(train)))
-# print('Testing Observations: %d' % (len(test)))
-
 
 x_train = data.iloc[:,:]
-print(x_train.columns)
 y_train = data.iloc[:,-6:]
-print(y_train.columns)
-
-# x_test = data.iloc[:,:]
-# y_test = data.iloc[:,-6:]
 
 x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2, random_state = 2) # 0.2 test_size means 20%
 
